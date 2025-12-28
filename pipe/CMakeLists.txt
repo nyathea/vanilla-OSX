@@ -1,1 +1,5 @@
-add_subdirectory(linux)
+if(APPLE)
+    add_subdirectory(macos)
+else()
+    add_subdirectory(linux)
+endif()

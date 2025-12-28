@@ -283,7 +283,7 @@ if (LINUX)
     find_package(VAAPI)
 endif()
 
-if (VANILLA_BUILD_PIPE)
+if (VANILLA_BUILD_PIPE AND NOT APPLE)
 	OPTION(VANILLA_BUILD_USE_POLKIT "Enable Polkit-based authentication" ON)
 endif()
 
@@ -316,13 +316,34 @@ if (NOT VANILLA_BUILD_VENDORED)
     find_package(SDL2 REQUIRED)
     find_package(SDL2_ttf REQUIRED)
     find_package(SDL2_image REQUIRED)
+
+    # On macOS with Homebrew, the code uses #include <SDL2/SDL.h> style includes,
+    # but CMake's find_package sets up the include path as the SDL2 subdirectory itself.
+    # We need to add the parent directory so the SDL2/ prefix in includes works.
+    if (APPLE)
+        # Homebrew installs to /opt/homebrew on Apple Silicon, /usr/local on Intel
+        if (EXISTS "/opt/homebrew/include/SDL2")
+            target_include_directories(vanilla PRIVATE "/opt/homebrew/include")
+        elseif (EXISTS "/usr/local/include/SDL2")
+            target_include_directories(vanilla PRIVATE "/usr/local/include")
+        endif()
+    endif()
+endif()
+
+# Set SDL2_ttf and SDL2_image target names based on vendored vs system packages
+if (VANILLA_BUILD_VENDORED)
+    set(_sdl2_ttf_lib SDL2_ttf)
+    set(_sdl2_image_lib SDL2_image)
+else()
+    set(_sdl2_ttf_lib SDL2_ttf::SDL2_ttf)
+    set(_sdl2_image_lib SDL2_image::SDL2_image)
 endif()
 
 target_link_libraries(vanilla PRIVATE
     ${_sdl_lib}
     SDL2::SDL2main
-    SDL2_ttf
-    SDL2_image
+    ${_sdl2_ttf_lib}
+    ${_sdl2_image_lib}
     libvanilla
     m
 )
